@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>言葉の動詞ガチャ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* 日本語フォントを優先しつつ、全体に適用 */
+        body {
+            font-family: 'Zen Kaku Gothic New', 'Inter', sans-serif;
+        }
+
+        /* カスタムキーフレームアニメーション */
+        @keyframes pulse-result {
+            0% { transform: scale(0.9); opacity: 0; filter: brightness(100%); }
+            100% { transform: scale(1); opacity: 1; filter: brightness(100%); }
+        }
+
+        /* 最終結果に適用するスタイル */
+        .result-visible {
+            animation: pulse-result 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+        }
+
+        /* ガチャ中のアニメーションスタイル */
+        .gacha-spinning {
+            filter: blur(4px) opacity(0.8);
+            color: #FED7AA; 
+            transition: all 0.05s;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-lg mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border-4 border-yellow-500/50">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center mb-4 text-yellow-400">名詞 x 動詞 コンセプトガチャ</h1>
+        <p class="text-gray-400 text-center mb-6 text-sm">
+            ランダムな「モノ」と「行為」で、<br>新しい体験のコンセプトを生み出します。
+        </p>
+
+        <!-- 結果表示エリア -->
+        <div class="mb-8 text-center bg-gray-700/50 p-4 rounded-xl shadow-inner border border-gray-700">
+            <!-- 擬似体験フレーズ (可視化要素) -->
+            <p id="catchphraseDisplay" class="text-xl font-bold text-gray-300 h-6 mb-4 opacity-0 transition duration-500"></p>
+            
+            <!-- 動詞表示エリア -->
+            <div class="h-16 flex items-center justify-center mb-2">
+                <p id="verbDisplay" class="text-3xl md:text-4xl font-black text-center text-red-400 transition duration-300">
+                    体験を
+                </p>
+            </div>
+
+            <!-- 名詞表示エリア -->
+            <div class="h-16 flex items-center justify-center">
+                <p id="nounDisplay" class="text-3xl md:text-4xl font-black text-center text-blue-400 transition duration-300">
+                    創造する
+                </p>
+            </div>
+            
+            <!-- 擬似体験フレーズ (ストーリー要素) -->
+            <p id="simulationPhrase" class="text-sm md:text-base italic text-yellow-300 mt-4 h-5 opacity-0 transition duration-500"></p>
+        </div>
+
+        <!-- ガチャボタン -->
+        <button id="gachaButton" 
+                class="w-full py-4 text-xl font-bold rounded-full shadow-lg transition duration-300 
+                       bg-gradient-to-r from-yellow-500 to-orange-500 
+                       hover:from-yellow-400 hover:to-orange-400 
+                       active:scale-95 focus:outline-none focus:ring-4 focus:ring-yellow-500/50"
+                onclick="startGacha()">
+            コンセプトガチャスタート！
+        </button>
+    </div>
+
+    <script>
+        // 1. データ定義
+        // 日常生活のモノに加え、自然物や飲食物を追加しました (合計50個)
+        const nouns = [
+            "スマートフォン", "財布", "鍵", "テレビ", "リモコン", "エアコン", "テーブル", "椅子", "ベッド", 
+            "布団", "枕", "本", "ペン", "ノート", "時計", "鏡", "パソコン", "充電器", 
+            "イヤホン", "ゴミ箱", 
+            "水", "バナナ", "リンゴ", "砂糖", "塩", "料理", // 飲食物
+            "雲", "太陽", "風", "地面", "炎", "山", "海", // 自然物
+            "自転車", "車", "電車", "バス", "道路", "公園", "信号機", "ポスト", // 公共・交通
+            "コップ", "皿", "箸", "歯ブラシ", "タオル", "シャンプー", "傘", "バッグ", "靴" // 日用品
+        ];
+
+        // 体験に関する動詞50個
+        const verbs = [
+            "擬似体験する", "可視化する", "没入する", "探究する", "発見する", "創造する", "構築する", "共有する", 
+            "記録する", "追体験する", "観察する", "分析する", "変換する", "再現する", "統合する", 
+            "拡張する", "接続する", "起動する", "停止する", "操作する", "移動する", "変化する", 
+            "挑戦する", "達成する", "克服する", "交流する", "理解する", "表現する", "記憶する", 
+            "忘却する", "探索する", "味わう", "感じる", "認識する", "想像する", "夢見る", 
+            "現実化する", "投影する", "拡散する", "収集する", "再構築する", "制御する", "連結する", 
+            "解放する", "同期する", "拡大する", "縮小する", "予測する", "生成する", "浸透する"
+        ];
+        
+        // 2. DOM要素の取得
+        const nounDisplay = document.getElementById('nounDisplay');
+        const verbDisplay = document.getElementById('verbDisplay');
+        const gachaButton = document.getElementById('gachaButton');
+        const simulationPhrase = document.getElementById('simulationPhrase');
+        const catchphraseDisplay = document.getElementById('catchphraseDisplay');
+        let spinInterval;
+        
+        // 3. ランダムな単語を取得
+        const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+        
+        // 4. 結果に応じた擬似体験フレーズを生成
+        function generateSimulation(noun, verb) {
+            let story = '';
+            let catchphrase = '';
+
+            // ストーリー生成ロジック
+            if (verb.includes('擬似体験')) {
+                story = `${noun}を通して、存在しない「もしも」の世界を旅する。`;
+            } else if (verb.includes('可視化')) {
+                story = `普段見えない${noun}の内部構造、その力が光の粒となって現れる。`;
+            } else if (verb.includes('没入')) {
+                story = `意識が${noun}の微細な世界へと溶け込み、時間も忘れる。`;
+            } else if (verb.includes('探究')) {
+                story = `誰も知らない${noun}の歴史、隠された真実を深く掘り起こす。`;
+            } else if (verb.includes('創造')) {
+                story = `真っ白なキャンバスに、理想とする${noun}の未来像を描き出す。`;
+            } else {
+                // 一般的な組み合わせ
+                story = `日常の${noun}をきっかけに、非日常を${verb}。`;
+            }
+
+            // キャッチコピー生成ロジック
+            if (noun.length <= 2) { // 例: 水、鍵、山
+                catchphrase = `「${noun}」を${verb}`;
+            } else if (noun.length >= 6) { // 例: トイレットペーパー、スマートフォン
+                catchphrase = `巨大な「${noun}」を${verb}`;
+            } else {
+                catchphrase = `「${noun}」と「${verb}」が交差する瞬間`;
+            }
+
+            return { story, catchphrase };
+        }
+
+        // 5. ガチャのアニメーション (高速切り替え)
+        function startSpinning() {
+            nounDisplay.classList.add('gacha-spinning');
+            verbDisplay.classList.add('gacha-spinning');
+            
+            simulationPhrase.classList.add('opacity-0');
+            catchphraseDisplay.classList.add('opacity-0');
+
+            spinInterval = setInterval(() => {
+                nounDisplay.textContent = getRandomElement(nouns);
+                verbDisplay.textContent = getRandomElement(verbs);
+            }, 50); // 50msごとに高速切り替え
+        }
+        
+        // 6. ガチャの停止と結果表示
+        function stopGacha() {
+            clearInterval(spinInterval);
+            
+            // スピニング中のスタイル解除
+            nounDisplay.classList.remove('gacha-spinning');
+            verbDisplay.classList.remove('gacha-spinning');
+
+            // 最終結果の選択
+            const finalNoun = getRandomElement(nouns);
+            const finalVerb = getRandomElement(verbs);
+            
+            nounDisplay.textContent = finalNoun;
+            verbDisplay.textContent = finalVerb;
+            
+            // 擬似体験フレーズの生成
+            const { story, catchphrase } = generateSimulation(finalNoun, finalVerb);
+            simulationPhrase.textContent = story;
+            catchphraseDisplay.textContent = catchphrase;
+            
+            // 結果表示アニメーション
+            nounDisplay.classList.add('result-visible');
+            verbDisplay.classList.add('result-visible');
+
+            // 擬似体験フレーズのフェードイン表示
+            setTimeout(() => {
+                simulationPhrase.classList.remove('opacity-0');
+                catchphraseDisplay.classList.remove('opacity-0');
+            }, 500);
+
+
+            // ボタンを再度有効化
+            gachaButton.disabled = false;
+            gachaButton.textContent = 'もう一度コンセプトガチャを引く';
+        }
+
+        // 7. ガチャ全体のフロー
+        function startGacha() {
+            gachaButton.disabled = true;
+            gachaButton.textContent = '... コンセプト生成中 ...';
+            
+            // 前回の結果アニメーションをリセット
+            nounDisplay.classList.remove('result-visible');
+            verbDisplay.classList.remove('result-visible');
+
+            // スピニング開始
+            startSpinning();
+
+            // 2.5秒後に停止
+            setTimeout(stopGacha, 2500);
+        }
+
+        // 初期表示の設定
+        window.onload = function() {
+            nounDisplay.textContent = '名詞';
+            verbDisplay.textContent = '動詞';
+            simulationPhrase.textContent = '';
+            catchphraseDisplay.textContent = '「モノ」と「行為」の新しい関係性';
+            catchphraseDisplay.classList.remove('opacity-0');
+        };
+
+    </script>
+</body>
+</html>
